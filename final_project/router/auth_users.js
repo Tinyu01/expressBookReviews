@@ -111,35 +111,36 @@ regd_users.put("/auth/review/:isbn", (req, res) => {
 
 // Task 9: Delete a book review
 regd_users.delete("/auth/review/:isbn", (req, res) => {
+    console.log("DELETE /auth/review hit"); // Debug log
     try {
         const isbn = req.params.isbn;
-        const username = req.session.authorization.username;
+        const token = req.headers.authorization?.split(' ')[1];
         
-        // Check if book exists
+        if (!token) {
+            console.log("No token provided");
+            return res.status(403).json({ message: "Authorization token required" });
+        }
+
+        const decoded = jwt.verify(token, "access");
+        const username = decoded.username;
+        console.log(`User ${username} deleting review for ISBN ${isbn}`); // Debug log
+
         if (!books[isbn]) {
+            console.log(`Book ${isbn} not found`);
             return res.status(404).json({ message: "Book not found" });
         }
-        
-        // Check if book has reviews
-        if (!books[isbn].reviews) {
-            return res.status(404).json({ message: "No reviews found for this book" });
+
+        if (!books[isbn].reviews?.[username]) {
+            console.log(`No review found for user ${username}`);
+            return res.status(404).json({ message: "No review found for this user" });
         }
-        
-        // Check if user has a review for this book
-        if (!books[isbn].reviews[username]) {
-            return res.status(404).json({ message: "No review found for this user and book" });
-        }
-        
-        // Delete the review
+
         delete books[isbn].reviews[username];
-        
-        return res.status(200).json({ 
-            message: "Review deleted successfully",
-            isbn: isbn,
-            username: username
-        });
-        
+        console.log("Review deleted successfully"); // Debug log
+        return res.status(200).json({ message: "Review deleted successfully" });
+
     } catch (error) {
+        console.error("DELETE error:", error.message); // Debug log
         return res.status(500).json({ message: "Error deleting review", error: error.message });
     }
 });
